@@ -110,6 +110,24 @@ async function run() {
             res.send(result)
         })
 
+        app.get("/parcels/riders", async (req, res) => {
+            const { riderEmail, deliveryStatus } = req.query;
+
+            const query = {}
+
+            if (riderEmail) {
+                query.riderEmail = riderEmail
+            }
+
+            if (deliveryStatus) {
+                query.deliveryStatus = deliveryStatus
+            }
+
+            const parcels = parcelsCollection.find(query)
+            const result = await parcels.toArray()
+            res.send(parcels)
+        })
+
         app.get("/parcels/:id", async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
@@ -266,13 +284,12 @@ async function run() {
                     { email: { $regex: searchText, $options: 'i' } }
                 ]
             }
-            const users = usersCollection.find(quary).limit(6).sort({ createdAt: -1 })
+            const users = await usersCollection.find(query).limit(6).sort({ createdAt: -1 })
             const result = await users.toArray()
             res.send(result)
         })
 
         app.get("/users/:id", async (req, res) => {
-
 
         })
 
