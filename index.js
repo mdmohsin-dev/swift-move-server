@@ -96,9 +96,13 @@ async function run() {
         app.get("/parcels", async (req, res) => {
             const query = {}
 
-            const { email } = req.query;
+            const { email, deliveryStatus } = req.query;
             if (email) {
                 query.senderEmail = email
+            }
+
+            if (deliveryStatus) {
+                query.deliveryStatus = deliveryStatus
             }
 
             const parcels = await parcelsCollection.find(query).sort({ createdAt: -1 })
@@ -117,6 +121,32 @@ async function run() {
             const parcel = req.body;
             const result = await parcelsCollection.insertOne(parcel)
             res.send(result)
+        })
+
+        app.patch("/parcels/:id", async (req, res) => {
+            const { riderId, riderName, riderEmail } = req.body;
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+
+            const updateDoc = {
+                $set: {
+                    riderId: riderId,
+                    riderName: riderName,
+                    riderEmail: riderEmail,
+                    deliveryStatus: "rider_assigned"
+                }
+            }
+
+            const result = await parcelsCollection.updateOne(query, updateDoc)
+
+            const riderQuery = { _id: new ObjectId(riderId) }
+            const riderUpdateDoc = {
+                $set: {
+                    workStatus: 'in_delivery'
+                }
+            }
+            const riderResult = await ridersCollection.updateOne(riderQuery, riderUpdateDoc)
+            res.send(riderResult)
         })
 
 
@@ -190,6 +220,7 @@ async function run() {
                 const update = {
                     $set: {
                         paymentStatus: 'paid',
+                        deliveryStatus: 'pending-pickup',
                         trackingId: trackingId
                     }
                 }
@@ -226,8 +257,18 @@ async function run() {
 
         // USERS API
         app.get("/users", async (req, res) => {
-            const users = await usersCollection.find().toArray()
-            res.send(users)
+            const searchText = req.query.searchText
+            const query = {}
+            if (searchText) {
+
+                query.$or = [
+                    { displayName: { $regex: searchText, $options: 'i' } },
+                    { email: { $regex: searchText, $options: 'i' } }
+                ]
+            }
+            const users = usersCollection.find(quary).limit(6).sort({ createdAt: -1 })
+            const result = await users.toArray()
+            res.send(result)
         })
 
         app.get("/users/:id", async (req, res) => {
@@ -235,7 +276,7 @@ async function run() {
 
         })
 
-        app.get("/users/:email/role",  async (req, res) => {
+        app.get("/users/:email/role", async (req, res) => {
             const email = req.params.email
 
             const quary = { email }
@@ -258,7 +299,7 @@ async function run() {
             res.send(result)
         })
 
-        app.patch("/users/:id/role", verifyFirebaseToken,verifyAdmin, async (req, res) => {
+        app.patch("/users/:id/role", verifyFirebaseToken, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const role = req.body.role
             const quary = { _id: new ObjectId(id) }
@@ -277,7 +318,19 @@ async function run() {
 
         // RIDERS API
         app.get('/riders', async (req, res) => {
-            const riders = ridersCollection.find()
+            const { district, workStatus } = req.query
+
+            const query = {}
+
+            if (district) {
+                query.district = district
+            }
+
+            if (workStatus) {
+                query.workStatus = workStatus
+            }
+
+            const riders = ridersCollection.find(query)
             const result = await riders.toArray()
             res.send(result)
         })
@@ -296,7 +349,8 @@ async function run() {
             const quary = { _id: new ObjectId(id) }
             const updateDoc = {
                 $set: {
-                    status: status
+                    status: status,
+                    workStatus: 'available'
                 }
             }
             const result = await ridersCollection.updateOne(quary, updateDoc)
