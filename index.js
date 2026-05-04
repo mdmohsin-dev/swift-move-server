@@ -167,6 +167,24 @@ async function run() {
             res.send(parcel)
         })
 
+        app.get('/parcels/delivery-status/stats', async (req, res) => {
+            const pipeline = [
+                {
+                    $match: {
+                        deliveryStatus: { $ne: null }
+                    }
+                },
+                {
+                    $group: {
+                        _id: '$deliveryStatus',
+                        count: { $sum: 1 }
+                    }
+                }
+            ]
+            const result = await parcelsCollection.aggregate(pipeline).toArray()
+            res.send(result)
+        })
+
         app.post("/parcels", async (req, res) => {
             const parcel = req.body;
             const result = await parcelsCollection.insertOne(parcel)
@@ -328,7 +346,7 @@ async function run() {
 
                 logTracking(trackingId, 'pending-pickup')
 
-               return res.send({
+                return res.send({
                     success: true,
                     modifyParcel: result,
                     trackingId: trackingId,
@@ -337,7 +355,7 @@ async function run() {
                 })
 
             }
-          return res.send({ success: false })
+            return res.send({ success: false })
         })
 
 
