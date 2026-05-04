@@ -93,6 +93,19 @@ async function run() {
         }
 
 
+
+        const verifyRider = async (req, res, next) => {
+            const email = req.decoded_email
+            const query = { email }
+            const user = await usersCollection.findOne(query)
+
+            if (!user || user.role !== 'rider') {
+                return res.status(403).send({ message: "Forbidden Access" })
+            }
+            next()
+        }
+
+
         const logTracking = async (trackingId, status) => {
             const log = {
                 trackingId,
