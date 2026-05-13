@@ -167,31 +167,55 @@ async function run() {
             res.send(parcel)
         })
 
-        app.get('/parcels/delivery-status/stats', async (req, res) => {
+        app.get('/parcels/delivery-status/stats', verifyFirebaseToken, async (req, res) => {
+            const email = req.decoded_email;
+            
+            const userDoc = await usersCollection.findOne({ email });
+            const role = userDoc?.role || 'user';
+
+            let matchStage = {
+                deliveryStatus: { $ne: null }
+            };
+
+
+            if (role !== 'admin') {
+                matchStage.senderEmail = email;
+            }
+
+
             const pipeline = [
+
                 {
-                    $match: {
-                        deliveryStatus: { $ne: null }
-                    }
+                    $match: matchStage
                 },
+
                 {
                     $group: {
                         _id: '$deliveryStatus',
-                        count: { $sum: 1 }
+                        count: {
+                            $sum: 1
+                        }
                     }
                 }
-            ]
-            const result = await parcelsCollection.aggregate(pipeline).toArray()
-            res.send(result)
+
+            ];
+
+
+            const result = await parcelsCollection
+                .aggregate(pipeline)
+                .toArray();
+
+
+            res.send(result);
         })
 
         app.post("/parcels", async (req, res) => {
             const parcel = req.body;
-            
+
             const trackingId = generateTrackingId()
             parcel.trackingId = trackingId
-            
-           await logTracking(trackingId, 'parcel_created')
+
+            await logTracking(trackingId, 'parcel_created')
             const result = await parcelsCollection.insertOne(parcel)
             res.send(result)
         })
