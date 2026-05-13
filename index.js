@@ -138,6 +138,27 @@ async function run() {
             res.send(result)
         })
 
+        app.get('/active-parcels', verifyFirebaseToken, async (req, res) => {
+            const email = req.decoded_email;
+
+            const activeStatuses = [
+                'pending-pickup',
+                'rider_assigned',
+                'in-transit'
+            ];
+
+            const result = await parcelsCollection
+                .find({
+                    senderEmail: email,
+                    deliveryStatus: {
+                        $in: activeStatuses
+                    }
+
+                })
+                .toArray();
+            res.send(result);
+        })
+
         app.get("/parcels/rider", async (req, res) => {
             const { riderEmail, deliveryStatus } = req.query;
 
@@ -169,7 +190,7 @@ async function run() {
 
         app.get('/parcels/delivery-status/stats', verifyFirebaseToken, async (req, res) => {
             const email = req.decoded_email;
-            
+
             const userDoc = await usersCollection.findOne({ email });
             const role = userDoc?.role || 'user';
 
