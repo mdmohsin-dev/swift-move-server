@@ -422,8 +422,26 @@ async function run() {
             res.send(result)
         })
 
-        app.get("/users/:id", async (req, res) => {
 
+        app.get('/users/role-stats', async (req, res) => {
+
+            const pipeline = [
+                {
+                    $group: {
+                        _id: '$role',
+                        count: {
+                            $sum: 1
+                        }
+                    }
+                }
+            ];
+            
+            const result = await usersCollection
+                .aggregate(pipeline)
+                .toArray();
+
+
+            res.send(result);
         })
 
         app.get("/users/:email/role", async (req, res) => {
