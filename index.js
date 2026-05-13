@@ -187,12 +187,12 @@ async function run() {
 
         app.post("/parcels", async (req, res) => {
             const parcel = req.body;
-            const result = await parcelsCollection.insertOne(parcel)
-
+            
             const trackingId = generateTrackingId()
             parcel.trackingId = trackingId
-
-            logTracking(trackingId, 'parcel_created')
+            
+           await logTracking(trackingId, 'parcel_created')
+            const result = await parcelsCollection.insertOne(parcel)
             res.send(result)
         })
 
