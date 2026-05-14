@@ -435,7 +435,7 @@ async function run() {
                     }
                 }
             ];
-            
+
             const result = await usersCollection
                 .aggregate(pipeline)
                 .toArray();
@@ -494,12 +494,16 @@ async function run() {
                 query.district = district
             }
 
+            // যদি workStatus পাঠানো হয় তাহলে সেই status এর rider আনবে
             if (workStatus) {
-                query.workStatus = workStatus
+                query.status = workStatus
+            }
+            // না পাঠালে pending বাদে সব আনবে
+            else {
+                query.status = { $ne: 'pending' }
             }
 
-            const riders = ridersCollection.find(query)
-            const result = await riders.toArray()
+            const result = await ridersCollection.find(query).toArray()
             res.send(result)
         })
 
