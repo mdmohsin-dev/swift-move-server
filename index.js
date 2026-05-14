@@ -486,7 +486,7 @@ async function run() {
 
         // RIDERS API
         app.get('/riders', async (req, res) => {
-            const { district, workStatus } = req.query
+            const { district, workStatus, status } = req.query
 
             const query = {}
 
@@ -494,13 +494,14 @@ async function run() {
                 query.district = district
             }
 
-            // যদি workStatus পাঠানো হয় তাহলে সেই status এর rider আনবে
-            if (workStatus) {
-                query.status = workStatus
-            }
-            // না পাঠালে pending বাদে সব আনবে
-            else {
+            if (status) {
+                query.status = status
+            } else {
                 query.status = { $ne: 'pending' }
+            }
+
+            if (workStatus) {
+                query.workStatus = workStatus
             }
 
             const result = await ridersCollection.find(query).toArray()
