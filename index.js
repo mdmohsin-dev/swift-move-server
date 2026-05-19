@@ -6,7 +6,9 @@ const crypto = require("crypto")
 const admin = require("firebase-admin");
 
 
-const serviceAccount = require("./firebase-adminsdk.json");
+
+const decoded = Buffer.from(process.env.FB_SERVICE_KEY, 'base64').toString('utf8')
+const serviceAccount = JSON.parse(decoded);
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
@@ -138,6 +140,31 @@ async function run() {
             res.send(result)
         })
 
+        app.get('/today-delivered-count', async (req, res) => {
+
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const tomorrow = new Date(today);
+                tomorrow.setDate(
+                    tomorrow.getDate() + 1
+                );
+
+                const result =
+                    await parcelsCollection.countDocuments({
+                        deliveryStatus:
+                            'parcel_delivered',
+                        deliveredTime: {
+                            $gte: today,
+                            $lt: tomorrow
+                        }
+                    });
+
+                res.send({
+                    todayDelivered: result
+                });
+            })
+
         app.get('/active-parcels', verifyFirebaseToken, async (req, res) => {
             const email = req.decoded_email;
 
@@ -198,11 +225,9 @@ async function run() {
                 deliveryStatus: { $ne: null }
             };
 
-
             if (role !== 'admin') {
                 matchStage.senderEmail = email;
             }
-
 
             const pipeline = [
 
@@ -218,9 +243,7 @@ async function run() {
                         }
                     }
                 }
-
             ];
-
 
             const result = await parcelsCollection
                 .aggregate(pipeline)
@@ -275,7 +298,8 @@ async function run() {
             const query = { _id: new ObjectId(req.params.id) }
             const updateDoc = {
                 $set: {
-                    deliveryStatus: deliveryStatus
+                    deliveryStatus: deliveryStatus,
+                    deliveredTime: new Date()
                 }
             }
 
@@ -557,8 +581,8 @@ async function run() {
         })
 
 
-        await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        // await client.db("admin").command({ ping: 1 });
+        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // await client.close();
     }
