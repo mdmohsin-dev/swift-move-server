@@ -122,7 +122,7 @@ async function run() {
 
 
 
-        // PARCEL API
+        // PARCEL API`````````````````````````````````````````````````````````````````````````````````
         app.get("/parcels", async (req, res) => {
             const query = {}
 
@@ -142,28 +142,28 @@ async function run() {
 
         app.get('/today-delivered-count', async (req, res) => {
 
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
 
-                const tomorrow = new Date(today);
-                tomorrow.setDate(
-                    tomorrow.getDate() + 1
-                );
+            const tomorrow = new Date(today);
+            tomorrow.setDate(
+                tomorrow.getDate() + 1
+            );
 
-                const result =
-                    await parcelsCollection.countDocuments({
-                        deliveryStatus:
-                            'parcel_delivered',
-                        deliveredTime: {
-                            $gte: today,
-                            $lt: tomorrow
-                        }
-                    });
-
-                res.send({
-                    todayDelivered: result
+            const result =
+                await parcelsCollection.countDocuments({
+                    deliveryStatus:
+                        'parcel_delivered',
+                    deliveredTime: {
+                        $gte: today,
+                        $lt: tomorrow
+                    }
                 });
-            })
+
+            res.send({
+                todayDelivered: result
+            });
+        })
 
         app.get('/active-parcels', verifyFirebaseToken, async (req, res) => {
             const email = req.decoded_email;
@@ -326,7 +326,7 @@ async function run() {
 
 
 
-        // PAYMENT API
+        // PAYMENT API``````````````````````````````````````````````````````````````````````````````````
         app.get("/payments", verifyFirebaseToken, async (req, res) => {
             const email = req.query.email;
             const query = {}
@@ -430,7 +430,7 @@ async function run() {
 
 
 
-        // USERS API
+        // USERS API```````````````````````````````````````````````````````````````````````````````
         app.get("/users", async (req, res) => {
             const searchText = req.query.searchText
             const query = {}
@@ -508,7 +508,7 @@ async function run() {
 
 
 
-        // RIDERS API
+        // RIDERS API```````````````````````````````````````````````````````````````````````````````
         app.get('/riders', async (req, res) => {
             const { district, workStatus, status } = req.query
 
@@ -530,6 +530,35 @@ async function run() {
 
             const result = await ridersCollection.find(query).toArray()
             res.send(result)
+        })
+
+
+        app.get('/rider/earnings', verifyFirebaseToken, async (req, res) => {
+
+            const email = req.decoded_email;
+
+            const pipeline = [
+                {
+                    $match: {
+                        riderEmail: email,
+                        deliveryStatus:'parcel_delivered'
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        totalEarnings: {
+                            $sum: '$cost'
+                        }
+                    }
+                }
+            ];
+
+            const result = await parcelsCollection.aggregate(pipeline).toArray();
+            res.send({
+                totalEarnings:
+                    result[0]?.totalEarnings || 0
+            });
         })
 
         app.post("/riders", async (req, res) => {
