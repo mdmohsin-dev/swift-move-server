@@ -135,7 +135,7 @@ async function run() {
                 query.deliveryStatus = deliveryStatus
             }
 
-            const parcels = await parcelsCollection.find(query).sort({ createdAt: -1 })
+            const parcels = parcelsCollection.find(query).sort({ createdAt: -1 })
             const result = await parcels.toArray()
             res.send(result)
         })
@@ -533,33 +533,58 @@ async function run() {
         })
 
 
-        app.get('/rider/earnings', verifyFirebaseToken, async (req, res) => {
+    app.get(
+    '/rider/earnings',
+    verifyFirebaseToken,
 
-            const email = req.decoded_email;
+    async (req, res) => {
 
-            const pipeline = [
-                {
-                    $match: {
-                        riderEmail: email,
-                        deliveryStatus:'parcel_delivered'
-                    }
-                },
-                {
-                    $group: {
-                        _id: null,
-                        totalEarnings: {
-                            $sum: '$cost'
-                        }
-                    }
-                }
-            ];
+        const email = req.decoded_email;
 
-            const result = await parcelsCollection.aggregate(pipeline).toArray();
-            res.send({
-                totalEarnings:
-                    result[0]?.totalEarnings || 0
-            });
-        })
+
+        const deliveredParcels =
+            await parcelsCollection.find({
+
+                riderEmail: email,
+
+                deliveryStatus:
+                    'parcel_delivered'
+
+            }).toArray();
+
+
+        let totalEarnings = 0;
+
+
+        deliveredParcels.forEach(parcel => {
+
+            if (
+                parcel.senderDistrict ===
+                parcel.recieverDistrict
+            ) {
+
+                totalEarnings +=
+                    parcel.cost * 0.8;
+
+            }
+
+            else {
+
+                totalEarnings +=
+                    parcel.cost * 0.6;
+
+            }
+
+        });
+
+
+        res.send({
+
+            totalEarnings
+
+        });
+
+    })
 
         app.post("/riders", async (req, res) => {
             const rider = req.body;
